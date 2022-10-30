@@ -1,10 +1,11 @@
+using api.Models;
 using api.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 
 public class SensorController : ControllerBase
 {
@@ -16,8 +17,17 @@ public class SensorController : ControllerBase
     }
 
     [HttpGet]
-    public async Task GetAll()
+    [Route("temperature")]
+    public async Task<List<SensorDataModel>> GetTemperatures()
     {    
-        await _sensorDataService.GetAsync();
-    } 
+       return await _sensorDataService.GetSensorDataAsync("temperature");
+
+    }
+    
+    [HttpGet]
+    [Route("humidity")]
+    public async Task<List<SensorDataModel>> GetHumidityValues()
+    {    
+        return await _sensorDataService.GetSensorDataAsync("humidity");
+    }
 }

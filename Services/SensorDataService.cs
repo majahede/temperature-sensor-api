@@ -1,3 +1,4 @@
+using System.Globalization;
 using api.Models;
 using InfluxDB.Client;
 using Microsoft.Extensions.Options;
@@ -16,19 +17,25 @@ public class SensorDataService
         _bucket = settings.Value.Bucket;
         _org = settings.Value.Org;
     }
-    public async Task GetAsync()
+    public async Task<List<SensorDataModel>> GetSensorDataAsync(string fieldName)
     {
-        Console.WriteLine(_org);
         var query = _client.GetQueryApi();
-        var flux = $"from(bucket:\"{_bucket}\") |> range(start: 0)";
-        var tables = await query.QueryAsync(flux, _org);
         
-        foreach (var t in tables)
-        {
-            foreach (var r in t.Records)
+        var flux =$"from(bucket: \"{_bucket}\") " +
+                  "|> range(start: -7d, stop: now()) " +
+                  $"|> filter(fn: (r) => r[\"_field\"] ==  \"{fieldName}\")" +
+                  "|> aggregateWindow(every: 24h, fn: mean, createEmpty: false)" +
+                  "|> yield(name: \"mean\")";
+        
+        var tables = await query.QueryAsync(flux, _org);
+
+        return (
+            from r in tables.SelectMany(t => t.Records) 
+            let time = (DateTime) r.GetTimeInDateTime() 
+            select new SensorDataModel
             {
-                Console.WriteLine(r.GetField);
-            }
-        }
+                Time = time.ToShortDateString(), 
+                Value = (double) r.GetValue()
+            }).ToList();
     }
 }
